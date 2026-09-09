@@ -150,3 +150,46 @@ button.ghost { background: transparent; color: var(--forest); border: 1px solid 
 .eligibility-update-card svg {
   flex-shrink: 0;
 }
+
+/* Language Selector */
+.language-selector {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.language-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.lang-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 6px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lang-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--surface);
+}
+
+.lang-btn.active {
+  background: var(--forest);
+  color: #fff;
+  border-color: var(--forest);
+}
+
+.lang-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

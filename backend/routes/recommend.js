@@ -14,7 +14,7 @@ const supabase = require('../lib/supabase');
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, income, projectCost, educationStatus } = req.body;
+    const { name, income, projectCost, educationStatus, language } = req.body;
     if (income == null || projectCost == null) {
       return res.status(400).json({ error: 'income and projectCost are required' });
     }
@@ -26,7 +26,8 @@ router.post('/', async (req, res) => {
       income: Number(income),
       capUsed: result.capUsed,
       projectCost: Number(projectCost),
-      schemeName: result.scheme.scheme_name
+      schemeName: result.scheme.scheme_name,
+      language: language || 'english'
     });
 
     // Save applicant profile for future Policy-Change scans
@@ -64,6 +65,32 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('[recommend] error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/recommend/explain
+ * body: { eligible, income, capUsed, projectCost, schemeName, language }
+ *
+ * Regenerates explanation in a different language without re-evaluating eligibility.
+ */
+router.post('/explain', async (req, res) => {
+  try {
+    const { eligible, income, capUsed, projectCost, schemeName, language } = req.body;
+    
+    const explanation = await explainResult({
+      eligible,
+      income: Number(income),
+      capUsed: Number(capUsed),
+      projectCost: Number(projectCost),
+      schemeName,
+      language: language || 'english'
+    });
+
+    res.json({ explanation });
+  } catch (err) {
+    console.error('[recommend/explain] error:', err);
     res.status(500).json({ error: err.message });
   }
 });

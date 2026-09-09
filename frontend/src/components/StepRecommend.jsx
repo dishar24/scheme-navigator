@@ -3,10 +3,19 @@ import { api } from '../api';
 
 const fmt = n => Math.round(n).toLocaleString('en-IN');
 
+const LANGUAGES = [
+  { code: 'english', label: 'English', native: 'English' },
+  { code: 'hindi', label: 'Hindi', native: 'हिन्दी' },
+  { code: 'kannada', label: 'Kannada', native: 'ಕನ್ನಡ' }
+];
+
 export default function StepRecommend({ result, input, onWhatIf, onBack, onNext }) {
   const [whatIfIncome, setWhatIfIncome] = useState(input.income);
   const [whatIfResult, setWhatIfResult] = useState(result);
   const [loading, setLoading] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const [explanation, setExplanation] = useState(result.explanation);
+  const [explanationLoading, setExplanationLoading] = useState(false);
 
   // debounced re-check against the real backend as the slider moves
   const runWhatIf = useCallback(async (val) => {
@@ -16,19 +25,41 @@ export default function StepRecommend({ result, input, onWhatIf, onBack, onNext 
         name: 'What-If Preview',
         income: Number(val),
         projectCost: input.projectCost,
-        educationStatus: input.educationStatus
+        educationStatus: input.educationStatus,
+        language: selectedLanguage
       });
       setWhatIfResult(r);
+      setExplanation(r.explanation);
     } catch (e) {
       // silently keep previous result on error — slider shouldn't break the flow
     } finally {
       setLoading(false);
     }
-  }, [input]);
+  }, [input, selectedLanguage]);
 
   function handleSlider(val) {
     setWhatIfIncome(val);
     runWhatIf(val);
+  }
+
+  async function handleLanguageChange(langCode) {
+    setSelectedLanguage(langCode);
+    setExplanationLoading(true);
+    try {
+      const response = await api.regenerateExplanation({
+        eligible: whatIfResult.eligible,
+        income: whatIfIncome,
+        capUsed: whatIfResult.capUsed,
+        projectCost: input.projectCost,
+        schemeName: whatIfResult.scheme.name,
+        language: langCode
+      });
+      setExplanation(response.explanation);
+    } catch (e) {
+      console.error('Failed to regenerate explanation:', e);
+    } finally {
+      setExplanationLoading(false);
+    }
   }
 
   const r = whatIfResult;
@@ -39,8 +70,25 @@ export default function StepRecommend({ result, input, onWhatIf, onBack, onNext 
         {r.eligible ? `${r.matchPct}% Match` : 'Not Eligible'}
       </div>
       <div className="scheme-name display">{r.scheme.name}</div>
+      
+      <div className="language-selector">
+        <label style={{ marginBottom: '8px' }}>Language / भाषा / ಭಾಷೆ</label>
+        <div className="language-buttons">
+          {LANGUAGES.map(lang => (
+            <button
+              key={lang.code}
+              className={`lang-btn ${selectedLanguage === lang.code ? 'active' : ''}`}
+              onClick={() => handleLanguageChange(lang.code)}
+              disabled={explanationLoading}
+            >
+              {lang.native}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className={`why-box ${r.eligible ? '' : 'no'}`}>
-        {r.explanation}
+        {explanationLoading ? 'Generating explanation...' : explanation}
       </div>
 
       <label>What-If Simulator — try a different income</label>
