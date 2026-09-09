@@ -29,19 +29,37 @@ async function explainResult({ eligible, income, capUsed, projectCost, schemeNam
     const targetLanguage = languageMap[language] || 'English';
 
     const prompt = eligible
-      ? `Write a brief, helpful explanation in ${targetLanguage} for a first-time loan applicant explaining:
-- They ARE ELIGIBLE for the "${schemeName}"
-- Their annual income is ₹${income} (within the ₹${capUsed} income limit)
-- Their project cost is ₹${projectCost}
-- What they should do next (proceed to calculate loan details)
+      ? `You are writing an eligibility explanation in ${targetLanguage} for a loan applicant.
 
-Keep it under 4 sentences, warm, encouraging, and easy to understand. Do not mention AI or models.`
-      : `Write a brief, helpful explanation in ${targetLanguage} for a first-time loan applicant explaining:
-- They are NOT ELIGIBLE for the "${schemeName}"
-- Their annual income is ₹${income} (exceeds the ₹${capUsed} income limit)
-- What this means and what they can do
+FACTS PROVIDED:
+- Scheme: "${schemeName}"
+- Applicant's annual income: ₹${income}
+- Income limit for this scheme: ₹${capUsed}
+- Project cost: ₹${projectCost}
+- Eligibility status: ELIGIBLE
 
-Keep it under 4 sentences, warm but factual, and easy to understand. Do not mention AI or models.`;
+STRICT REQUIREMENTS:
+Write EXACTLY 3 complete sentences. No more, no less.
+- Sentence 1: State that the applicant IS ELIGIBLE for the "${schemeName}".
+- Sentence 2: Explain that their income of ₹${income} is within the ₹${capUsed} limit and their project cost of ₹${projectCost} fits this scheme.
+- Sentence 3: Tell them to proceed to calculate loan details and explore required documents.
+
+Use ONLY the facts provided above. Do not mention AI, models, or technology. Write in plain ${targetLanguage}. No bullet points. No headings. No markdown. Return ONLY the 3 sentences. Each sentence must be complete. Do not stop mid-sentence. Keep the total response between 45-80 words.`
+      : `You are writing an eligibility explanation in ${targetLanguage} for a loan applicant.
+
+FACTS PROVIDED:
+- Scheme: "${schemeName}"
+- Applicant's annual income: ₹${income}
+- Income limit for this scheme: ₹${capUsed}
+- Eligibility status: NOT ELIGIBLE
+
+STRICT REQUIREMENTS:
+Write EXACTLY 3 complete sentences. No more, no less.
+- Sentence 1: State that the applicant is NOT ELIGIBLE for the "${schemeName}".
+- Sentence 2: Explain that their income of ₹${income} exceeds the ₹${capUsed} income limit for this scheme.
+- Sentence 3: Suggest they check other schemes or reapply if their income changes.
+
+Use ONLY the facts provided above. Do not mention AI, models, or technology. Write in plain ${targetLanguage}. No bullet points. No headings. No markdown. Return ONLY the 3 sentences. Each sentence must be complete. Do not stop mid-sentence. Keep the total response between 45-80 words.`;
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -52,19 +70,51 @@ Keep it under 4 sentences, warm but factual, and easy to understand. Do not ment
       body: JSON.stringify({
         model: GROQ_MODEL,
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 200,
-        temperature: 0.4
+        max_tokens: 250,
+        temperature: 0.3
       })
     });
 
     if (!res.ok) throw new Error(`Groq API error: ${res.status}`);
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content?.trim();
-    return text || templateExplanation({ eligible, income, capUsed, projectCost, schemeName, language });
+    
+    // Validate the response
+    if (!isValidExplanation(text)) {
+      console.warn('[explain] Groq response failed validation, using template');
+      return templateExplanation({ eligible, income, capUsed, projectCost, schemeName, language });
+    }
+    
+    return text;
   } catch (err) {
     console.error('[explain] Groq call failed, falling back to template:', err.message);
     return templateExplanation({ eligible, income, capUsed, projectCost, schemeName, language });
   }
+}
+
+/**
+ * Validates that the Groq explanation is complete and usable.
+ * Returns false if the text is empty, too short, or appears incomplete.
+ */
+function isValidExplanation(text) {
+  if (!text || typeof text !== 'string') return false;
+  
+  const trimmed = text.trim();
+  
+  // Must be at least 30 characters (suspiciously short otherwise)
+  if (trimmed.length < 30) return false;
+  
+  // Must contain at least 2 sentences (look for sentence-ending punctuation)
+  const sentenceEndings = trimmed.match(/[.!?।॥]/g);
+  if (!sentenceEndings || sentenceEndings.length < 2) return false;
+  
+  // Should not end with an incomplete word/sentence marker
+  if (trimmed.endsWith('...') || trimmed.endsWith(',')) return false;
+  
+  // Should not contain markdown headers or bullet points
+  if (trimmed.includes('#') || trimmed.match(/^\s*[-*•]/m)) return false;
+  
+  return true;
 }
 
 function templateExplanation({ eligible, income, capUsed, projectCost, schemeName, language = 'english' }) {

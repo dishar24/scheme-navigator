@@ -6,15 +6,15 @@ const supabase = require('../lib/supabase');
 
 /**
  * POST /api/recommend
- * body: { name, income, projectCost, educationStatus }
+ * body: { name, income, projectCost, educationStatus, language, isWhatIf }
  *
  * Flow: User Input -> Rules Engine -> Recommendation Ranking -> AI Explanation Layer
- * Also SAVES the applicant, which is what makes the Policy-Change
- * Scanner possible later.
+ * Also SAVES the applicant (unless isWhatIf=true), which is what makes 
+ * the Policy-Change Scanner possible later.
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, income, projectCost, educationStatus, language } = req.body;
+    const { name, income, projectCost, educationStatus, language, isWhatIf } = req.body;
     if (income == null || projectCost == null) {
       return res.status(400).json({ error: 'income and projectCost are required' });
     }
@@ -30,24 +30,29 @@ router.post('/', async (req, res) => {
       language: language || 'english'
     });
 
-    // Save applicant profile for future Policy-Change scans
-    const { data: saved, error: saveErr } = await supabase
-      .from('applicants')
-      .insert({
-        name: name || `Applicant ${Date.now()}`,
-        income: Number(income),
-        project_cost: Number(projectCost),
-        education_status: educationStatus || 'unspecified',
-        matched_scheme_id: result.scheme.scheme_id,
-        matched_scheme_version: result.scheme.version,
-        eligible_at_submission: result.eligible
-      })
-      .select()
-      .single();
-    if (saveErr) throw saveErr;
+    let applicantId = null;
+
+    // Only save applicant profile if this is NOT a What-If simulation
+    if (!isWhatIf) {
+      const { data: saved, error: saveErr } = await supabase
+        .from('applicants')
+        .insert({
+          name: name || `Applicant ${Date.now()}`,
+          income: Number(income),
+          project_cost: Number(projectCost),
+          education_status: educationStatus || 'unspecified',
+          matched_scheme_id: result.scheme.scheme_id,
+          matched_scheme_version: result.scheme.version,
+          eligible_at_submission: result.eligible
+        })
+        .select()
+        .single();
+      if (saveErr) throw saveErr;
+      applicantId = saved.id;
+    }
 
     res.json({
-      applicantId: saved.id,
+      applicantId,
       scheme: {
         id: result.scheme.scheme_id,
         name: result.scheme.scheme_name,
