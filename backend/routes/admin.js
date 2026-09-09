@@ -80,7 +80,9 @@ router.post('/scan', async (req, res) => {
   try {
     const { data: applicants, error: appErr } = await supabase
       .from('applicants')
-      .select('*');
+      .select('*')
+      .neq('name', 'What-If Preview')
+      .order('created_at', { ascending: false });
     if (appErr) throw appErr;
 
     const currentRules = await getCurrentRules();
