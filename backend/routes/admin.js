@@ -114,4 +114,47 @@ router.post('/scan', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/eligibility-update/:applicantId
+ *
+ * Check if a specific applicant's eligibility has changed under current rules.
+ * Used to show eligibility updates in the Applicant View.
+ */
+router.get('/eligibility-update/:applicantId', async (req, res) => {
+  try {
+    const { applicantId } = req.params;
+
+    const { data: applicant, error: appErr } = await supabase
+      .from('applicants')
+      .select('*')
+      .eq('id', applicantId)
+      .single();
+    if (appErr) throw appErr;
+
+    const currentRules = await getCurrentRules();
+    const now = evaluate(applicant.income, applicant.project_cost, currentRules);
+    
+    const before = applicant.eligible_at_submission;
+    const after = now.eligible;
+
+    let change = 'no_change';
+    if (!before && after) change = 'newly_eligible';
+    else if (before && !after) change = 'no_longer_eligible';
+
+    // Find the matched scheme name from current rules
+    const matchedScheme = currentRules.find(r => r.scheme_id === applicant.matched_scheme_id);
+
+    res.json({
+      hasUpdate: change !== 'no_change',
+      change,
+      schemeName: matchedScheme ? matchedScheme.scheme_name : applicant.matched_scheme_id,
+      before,
+      after
+    });
+  } catch (err) {
+    console.error('[admin/eligibility-update] error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

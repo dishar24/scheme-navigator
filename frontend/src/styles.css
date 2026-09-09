@@ -105,3 +105,48 @@ button.ghost { background: transparent; color: var(--forest); border: 1px solid 
 .mock-note { font-size: 12px; color: var(--gold-dark); font-weight: 600; margin-top: -8px; margin-bottom: 18px; }
 .loading { color: var(--ink-soft); font-size: 14px; padding: 20px 0; }
 .error-box { background: var(--danger-bg); color: var(--danger); padding: 12px 16px; border-radius: 6px; font-size: 14px; margin-bottom: 16px; }
+
+/* Eligibility Update Card */
+.eligibility-update-card {
+  background: var(--success-bg);
+  border: 2px solid var(--success);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.eligibility-update-card.negative {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+.eligibility-update-card .update-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--success);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.eligibility-update-card.negative .update-header {
+  color: var(--danger);
+}
+
+.eligibility-update-card .update-scheme {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--forest);
+  margin-bottom: 6px;
+}
+
+.eligibility-update-card .update-message {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.eligibility-update-card svg {
+  flex-shrink: 0;
+}

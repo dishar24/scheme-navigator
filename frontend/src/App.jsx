@@ -6,6 +6,7 @@ import StepCalculator from './components/StepCalculator';
 import StepDocs from './components/StepDocs';
 import StepPartners from './components/StepPartners';
 import AdminPanel from './components/AdminPanel';
+import EligibilityUpdateCard from './components/EligibilityUpdateCard';
 
 const STEP_LABELS = ['Your Details', 'Recommendation', 'Calculator', 'Documents', 'Find Partner'];
 
@@ -15,6 +16,7 @@ export default function App() {
   const [input, setInput] = useState(null);
   const [result, setResult] = useState(null);
   const [finalScheme, setFinalScheme] = useState(null);
+  const [applicantId, setApplicantId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -25,6 +27,7 @@ export default function App() {
       const r = await api.recommend(payload);
       setInput(payload);
       setResult(r);
+      setApplicantId(r.applicantId);
       setStep(2);
     } catch (e) {
       setError(e.message);
@@ -38,6 +41,7 @@ export default function App() {
     setInput(null);
     setResult(null);
     setFinalScheme(null);
+    setApplicantId(null);
     setError(null);
   }
 
@@ -66,6 +70,10 @@ export default function App() {
               return <div className={`step-pill ${cls}`} key={label}>{n}. {label}</div>;
             })}
           </div>
+
+          {applicantId && step > 1 && (
+            <EligibilityUpdateCard applicantId={applicantId} />
+          )}
 
           {step === 1 && (
             <StepInput onSubmit={handleInputSubmit} loading={loading} error={error} />

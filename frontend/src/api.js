@@ -36,5 +36,8 @@ export const api = {
     }).then(handle),
 
   adminScan: () =>
-    fetch(`${BASE}/admin/scan`, { method: 'POST' }).then(handle)
+    fetch(`${BASE}/admin/scan`, { method: 'POST' }).then(handle),
+
+  checkEligibilityUpdate: (applicantId) =>
+    fetch(`${BASE}/admin/eligibility-update/${applicantId}`).then(handle)
 };
